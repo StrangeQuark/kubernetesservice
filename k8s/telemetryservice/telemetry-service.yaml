@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: telemetry-service
+spec:
+  type: ClusterIP
+  selector:
+    app: telemetry-service
+  ports:
+    - name: http
+      port: 6050
+      targetPort: 6050
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetry-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telemetry-service
+  template:
+    metadata:
+      labels:
+        app: telemetry-service
+        com.msinit.log: "true"
+        com.msinit.service-name: telemetryservice
+    spec:
+      containers:
+        - name: telemetry-service
+          image: __SERVICE_IMAGE__
+          ports:
+            - containerPort: 6050
+          envFrom:
+            - secretRef:
+                name: telemetryservice-env
+          env:
+            - name: SPRING_DATA_MONGODB_URI
+              value: mongodb://$(MONGO_APP_USERNAME):$(MONGO_APP_PASSWORD)@telemetry-db:27017/$(SPRING_DATA_MONGODB_DATABASE)?authSource=$(SPRING_DATA_MONGODB_DATABASE)
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /api/telemetry/health
+              port: 6050
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/telemetry/health
+              port: 6050
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory

@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: email-db
+spec:
+  clusterIP: None
+  selector:
+    app: email-db
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: email-db
+spec:
+  serviceName: email-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: email-db
+  template:
+    metadata:
+      labels:
+        app: email-db
+    spec:
+      containers:
+        - name: email-db
+          image: postgres:13.1-alpine@sha256:16af09e480c49226f8e7cd4d602ab27e59f434eb255d2b45bd0cfe1defb86fd7
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: emailservice-env
+          volumeMounts:
+            - name: email-db-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: email-db-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi

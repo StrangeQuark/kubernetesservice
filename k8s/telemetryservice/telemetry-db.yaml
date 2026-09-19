@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: telemetry-db-init
+data:
+  mongo-init.js: |
+    db = db.getSiblingDB(process.env.MONGO_INITDB_DATABASE);
+    db.createUser({
+        user: process.env.MONGO_APP_USERNAME,
+        pwd: process.env.MONGO_APP_PASSWORD,
+        roles: [{ role: "readWrite", db: process.env.MONGO_INITDB_DATABASE }]
+    });
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: telemetry-db
+spec:
+  clusterIP: None
+  selector:
+    app: telemetry-db
+  ports:
+    - port: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: telemetry-db
+spec:
+  serviceName: telemetry-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telemetry-db
+  template:
+    metadata:
+      labels:
+        app: telemetry-db
+    spec:
+      containers:
+        - name: telemetry-db
+          image: mongo:6.0@sha256:8b6d8f5bbedb25cb73517b65cf99f13aeb75ad5b157a56c479287a840bbad3ac
+          ports:
+            - containerPort: 27017
+          envFrom:
+            - secretRef:
+                name: telemetryservice-env
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: telemetryservice-env
+                  key: MONGO_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telemetryservice-env
+                  key: MONGO_ROOT_PASSWORD
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: telemetryservice-env
+                  key: SPRING_DATA_MONGODB_DATABASE
+          volumeMounts:
+            - name: telemetry-db-data
+              mountPath: /data/db
+            - name: telemetry-db-init
+              mountPath: /docker-entrypoint-initdb.d/mongo-init.js
+              subPath: mongo-init.js
+      volumes:
+        - name: telemetry-db-init
+          configMap:
+            name: telemetry-db-init
+  volumeClaimTemplates:
+    - metadata:
+        name: telemetry-db-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-express
+spec:
+  selector:
+    app: mongo-express
+  ports:
+    - port: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-express
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-express
+  template:
+    metadata:
+      labels:
+        app: mongo-express
+    spec:
+      containers:
+        - name: mongo-express
+          image: mongo-express@sha256:1b23d7976f0210dbec74045c209e52fbb26d29b2e873d6c6fa3d3f0ae32c2a64
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - secretRef:
+                name: telemetryservice-env
+          env:
+            - name: ME_CONFIG_MONGODB_URL
+              value: mongodb://$(MONGO_APP_USERNAME):$(MONGO_APP_PASSWORD)@telemetry-db:27017/$(SPRING_DATA_MONGODB_DATABASE)?authSource=$(SPRING_DATA_MONGODB_DATABASE)
+            - name: ME_CONFIG_MONGODB_ENABLE_ADMIN
+              value: "false"
+            - name: ME_CONFIG_BASICAUTH_ENABLED
+              value: "true"
+            - name: ME_CONFIG_BASICAUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: telemetryservice-env
+                  key: MONGO_EXPRESS_USERNAME
+            - name: ME_CONFIG_BASICAUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telemetryservice-env
+                  key: MONGO_EXPRESS_PASSWORD

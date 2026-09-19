@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: file-service
+spec:
+  type: ClusterIP
+  selector:
+    app: file-service
+  ports:
+    - name: http
+      port: 6010
+      targetPort: 6010
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: file-service
+  template:
+    metadata:
+      labels:
+        app: file-service
+        com.msinit.log: "true"
+        com.msinit.service-name: fileservice
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: file-service
+          image: __SERVICE_IMAGE__
+          ports:
+            - containerPort: 6010
+          envFrom:
+            - secretRef:
+                name: fileservice-env
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: file-storage
+              mountPath: /fileservice/uploads
+          readinessProbe:
+            httpGet:
+              path: /api/file/health
+              port: 6010
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/file/health
+              port: 6010
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+        - name: file-storage
+          persistentVolumeClaim:
+            claimName: file-storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: file-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
