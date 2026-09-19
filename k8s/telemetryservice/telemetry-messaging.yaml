@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: telemetry-zookeeper
+spec:
+  selector:
+    app: telemetry-zookeeper
+  ports:
+    - port: 2182
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetry-zookeeper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telemetry-zookeeper
+  template:
+    metadata:
+      labels:
+        app: telemetry-zookeeper
+    spec:
+      containers:
+        - name: telemetry-zookeeper
+          image: confluentinc/cp-zookeeper:7.6.0@sha256:9babd1c0beaf93189982bdbb9fe4bf194a2730298b640c057817746c19838866
+          envFrom:
+            - secretRef:
+                name: telemetryservice-env
+          ports:
+            - containerPort: 2182
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: telemetry-kafka
+spec:
+  selector:
+    app: telemetry-kafka
+  ports:
+    - port: 9093
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetry-kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telemetry-kafka
+  template:
+    metadata:
+      labels:
+        app: telemetry-kafka
+    spec:
+      containers:
+        - name: telemetry-kafka
+          image: confluentinc/cp-kafka:7.6.0@sha256:24cdd3a7fa89d2bed150560ebea81ff1943badfa61e51d66bb541a6b0d7fb047
+          envFrom:
+            - secretRef:
+                name: telemetryservice-env
+          ports:
+            - containerPort: 9093

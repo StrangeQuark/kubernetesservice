@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-service
+  template:
+    metadata:
+      labels:
+        app: gateway-service
+        com.msinit.log: "true"
+        com.msinit.service-name: gatewayservice
+    spec:
+      containers:
+        - name: gateway-service
+          image: __SERVICE_IMAGE__
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: gatewayservice-env
+          env:
+            - name: SERVER_SSL_ENABLED
+              value: "false"
+          resources:
+            limits:
+              memory: 512Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /api/gateway/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/gateway/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory

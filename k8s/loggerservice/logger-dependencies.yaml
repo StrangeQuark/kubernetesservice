@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch
+spec:
+  selector:
+    app: opensearch
+  ports:
+    - port: 9200
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opensearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensearch
+  template:
+    metadata:
+      labels:
+        app: opensearch
+    spec:
+      containers:
+        - name: opensearch
+          image: opensearchproject/opensearch:2.19.6@sha256:8690b204fe914c60ca76d451ac73bc0481e034d32d3779944c8caca56a2b003f
+          ports:
+            - containerPort: 9200
+          envFrom:
+            - secretRef:
+                name: loggerservice-env
+          env:
+            - name: discovery.type
+              valueFrom:
+                secretKeyRef:
+                  name: loggerservice-env
+                  key: DISCOVERY_TYPE
+            - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: loggerservice-env
+                  key: OPENSEARCH_PASSWORD
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboards
+spec:
+  selector:
+    app: dashboards
+  ports:
+    - port: 5601
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboards
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboards
+  template:
+    metadata:
+      labels:
+        app: dashboards
+    spec:
+      initContainers:
+        - name: wait-for-opensearch
+          image: opensearchproject/opensearch:2.19.6@sha256:8690b204fe914c60ca76d451ac73bc0481e034d32d3779944c8caca56a2b003f
+          command:
+            - sh
+            - -c
+            - until curl --fail --insecure -u admin:"$OPENSEARCH_PASSWORD" https://opensearch:9200/_cluster/health; do sleep 5; done
+          envFrom:
+            - secretRef:
+                name: loggerservice-env
+      containers:
+        - name: dashboards
+          image: opensearchproject/opensearch-dashboards:2.19.6@sha256:7aaefffac1660cab61ecf1e52fdcde6c156587a020dfa9246d529ea5e784dcee
+          ports:
+            - containerPort: 5601
+          envFrom:
+            - secretRef:
+                name: loggerservice-env

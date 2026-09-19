@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway-service
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - __INGRESS_HOST__
+      secretName: __INGRESS_TLS_SECRET_NAME__
+  rules:
+    - host: __INGRESS_HOST__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-service
+                port:
+                  number: 8080

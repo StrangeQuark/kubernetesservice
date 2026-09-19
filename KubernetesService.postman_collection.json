@@ -1,0 +1,466 @@
+{
+	"info": {
+		"_postman_id": "b6b5d1e1-1a47-41a4-a282-d1641cfa17ed",
+		"name": "KubernetesService",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "29355577"
+	},
+	"variable": [
+		{
+			"key": "KUBERNETES_CICD_TOKEN",
+			"value": ""
+		},
+		{
+			"key": "AUTH_SERVICE_IMAGE",
+			"value": "authservice:local"
+		},
+		{
+			"key": "AUTH_SERVICE_ENV_FILE",
+			"value": "/path/to/authservice.env"
+		}
+	],
+	"item": [
+		{
+			"name": "Healthcheck",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Deploy AuthService",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "serviceName",
+							"value": "authservice",
+							"type": "text"
+						},
+						{
+							"key": "image",
+							"value": "{{AUTH_SERVICE_IMAGE}}",
+							"type": "text"
+						},
+						{
+							"key": "environmentFile",
+							"type": "file",
+							"src": "{{AUTH_SERVICE_ENV_FILE}}"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/deploy",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"deploy"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Services",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/services",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"services"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get AuthService Status",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/status?serviceName=authservice",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"status"
+					],
+					"query": [
+						{
+							"key": "serviceName",
+							"value": "authservice"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Scale AuthService",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"serviceName\": \"authservice\",\n    \"replicas\": 2\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/scale",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"scale"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Restart AuthService",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"serviceName\": \"authservice\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/restart",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"restart"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Configure AuthService Autoscaling",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"serviceName\": \"authservice\",\n    \"minimumReplicas\": 1,\n    \"maximumReplicas\": 3,\n    \"targetCpuUtilization\": 70\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/autoscaling",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"autoscaling"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Configure AuthService Exposure",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"serviceName\": \"authservice\",\n    \"mode\": \"local\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/exposure",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"exposure"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rollback AuthService",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"serviceName\": \"authservice\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/rollback",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"rollback"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Undeploy AuthService",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-CICD-TOKEN",
+						"value": "{{KUBERNETES_CICD_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"serviceName\": \"authservice\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:6011/api/kubernetes/undeploy",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "6011",
+					"path": [
+						"api",
+						"kubernetes",
+						"undeploy"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
