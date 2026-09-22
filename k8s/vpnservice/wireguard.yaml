@@ -1,0 +1,221 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wireguard-config
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wireguard-init
+data:
+  10-vpn-router-dns.sh: |
+    #!/bin/sh
+
+    corefile=/config/coredns/Corefile
+
+    if ! grep -q "$VPN_ROUTER_HOSTNAME" "$corefile"; then
+        sed -i "/^[[:space:]]*health$/a\\
+        hosts {\\
+            ${VPN_ADDRESS_PREFIX}.1 ${VPN_ROUTER_HOSTNAME}\\
+            fallthrough\\
+        }" "$corefile"
+    fi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wireguard
+spec:
+  type: ClusterIP
+  selector:
+    app: wireguard
+  ports:
+    - name: control
+      port: 51821
+      targetPort: control
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpn-router
+spec:
+  type: ClusterIP
+  selector:
+    app: wireguard
+  ports:
+    - name: http
+      port: 80
+      targetPort: router
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vpn-router
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: vpn-local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vpn-router
+                port:
+                  number: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wireguard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wireguard
+  template:
+    metadata:
+      labels:
+        app: wireguard
+        com.msinit.service-name: vpnservice
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: wireguard
+          image: lscr.io/linuxserver/wireguard:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: wireguard
+              containerPort: 51820
+              protocol: UDP
+          envFrom:
+            - secretRef:
+                name: vpnservice-env
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: SERVERURL
+              valueFrom:
+                secretKeyRef:
+                  name: vpnservice-env
+                  key: VPN_HOST
+            - name: SERVERPORT
+              valueFrom:
+                secretKeyRef:
+                  name: vpnservice-env
+                  key: VPN_PORT
+            - name: PEERS
+              value: "0"
+            - name: INTERNAL_SUBNET
+              valueFrom:
+                secretKeyRef:
+                  name: vpnservice-env
+                  key: VPN_INTERNAL_SUBNET
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - name: wireguard-config
+              mountPath: /config
+            - name: tun
+              mountPath: /dev/net/tun
+            - name: wireguard-init
+              mountPath: /custom-cont-init.d/10-vpn-router-dns.sh
+              subPath: 10-vpn-router-dns.sh
+        - name: wireguard-control
+          image: ghcr.io/strangequark/vpnservice-wireguard-control:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: control
+              containerPort: 51821
+          envFrom:
+            - secretRef:
+                name: vpnservice-env
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - name: wireguard-config
+              mountPath: /config
+        - name: vpn-router
+          image: ghcr.io/strangequark/vpnservice-vpn-router:1.0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: router
+              containerPort: 8081
+          envFrom:
+            - secretRef:
+                name: vpnservice-env
+          env:
+            - name: VPN_ROUTER_BIND_ADDRESS
+              value: 0.0.0.0
+            - name: VPN_ROUTER_PORT
+              value: "8081"
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: AUTH_SERVICE_URL
+              value: http://auth-service.$(KUBERNETES_NAMESPACE).svc.cluster.local:6001
+            - name: EMAIL_SERVICE_URL
+              value: http://email-service.$(KUBERNETES_NAMESPACE).svc.cluster.local:6005
+            - name: FILE_SERVICE_URL
+              value: http://file-service.$(KUBERNETES_NAMESPACE).svc.cluster.local:6010
+            - name: VAULT_SERVICE_URL
+              value: http://vault-service.$(KUBERNETES_NAMESPACE).svc.cluster.local:6020
+            - name: TELEMETRY_SERVICE_URL
+              value: http://telemetry-service.$(KUBERNETES_NAMESPACE).svc.cluster.local:6050
+            - name: GATEWAY_SERVICE_URL
+              value: http://gateway-service.$(KUBERNETES_NAMESPACE).svc.cluster.local:8080
+            - name: REACT_SERVICE_URL
+              value: http://react-service.$(KUBERNETES_NAMESPACE).svc.cluster.local
+            - name: VPN_SERVICE_URL
+              value: http://vpn-service.$(KUBERNETES_NAMESPACE).svc.cluster.local:6040
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: wireguard-config
+          persistentVolumeClaim:
+            claimName: wireguard-config
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+        - name: wireguard-init
+          configMap:
+            name: wireguard-init
+            defaultMode: 0755
+        - name: tmp
+          emptyDir:
+            medium: Memory
