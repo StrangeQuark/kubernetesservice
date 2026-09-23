@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpn-service
+spec:
+  type: ClusterIP
+  selector:
+    app: vpn-service
+  ports:
+    - name: http
+      port: 6040
+      targetPort: 6040
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpn-service
+  annotations:
+    msinit.io/scaling: disabled
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpn-service
+  template:
+    metadata:
+      labels:
+        app: vpn-service
+        com.msinit.log: "true"
+        com.msinit.service-name: vpnservice
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: vpn-service
+          image: __SERVICE_IMAGE__
+          ports:
+            - containerPort: 6040
+          envFrom:
+            - secretRef:
+                name: vpnservice-env
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /api/vpn/health
+              port: 6040
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/vpn/health
+              port: 6040
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory

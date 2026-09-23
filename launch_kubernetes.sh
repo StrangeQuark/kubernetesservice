@@ -159,13 +159,21 @@ nodes:
         hostPort: 6100
         listenAddress: "127.0.0.1"
         protocol: TCP
+      - containerPort: 30040
+        hostPort: 6040
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 51820
+        hostPort: 51820
+        listenAddress: "0.0.0.0"
+        protocol: UDP
 EOF
     "$kind_command" create cluster --name "$cluster_name" \
         --config "$kubernetes_service_folder/.tools/kind-local-config.yaml" --wait 5m
 else
     echo "Kind cluster already exists: $cluster_name"
 
-    for host_port in 1080 6001 6005 6010 6011 6020 6030 6050 6080 8080 6100; do
+    for host_port in 1080 6001 6005 6010 6011 6020 6030 6040 6050 6080 8080 6100 51820; do
         if ! docker inspect "$cluster_name-control-plane" | grep -q '"HostPort"[[:space:]]*:[[:space:]]*"'"$host_port"'"'; then
             echo "The existing Kind cluster was not created with MSINIT local port mappings"
             echo "Delete and recreate it with: $kind_command delete cluster --name $cluster_name"

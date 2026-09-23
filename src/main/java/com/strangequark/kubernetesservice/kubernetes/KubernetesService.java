@@ -110,6 +110,9 @@ public class KubernetesService {
             if(!isServiceSupported(serviceName))
                 return ResponseEntity.status(400).body("Unsupported service: " + serviceName);
 
+            if(isScalingDisabled(serviceName))
+                return ResponseEntity.status(400).body("Service does not support scaling");
+
             if(replicas < 0)
                 return ResponseEntity.status(400).body("Replica count cannot be negative");
 
@@ -270,6 +273,9 @@ public class KubernetesService {
             if(!isServiceSupported(serviceName))
                 return ResponseEntity.status(400).body("Unsupported service: " + serviceName);
 
+            if(isScalingDisabled(serviceName))
+                return ResponseEntity.status(400).body("Service does not support scaling");
+
             if(minimumReplicas < 1 || maximumReplicas < minimumReplicas)
                 return ResponseEntity.status(400).body("Invalid replica range");
 
@@ -384,6 +390,14 @@ public class KubernetesService {
             throw new RuntimeException("Service is not deployed");
 
         return deployment;
+    }
+
+    /**
+     * Check whether a service manifest disables scaling
+     */
+    private boolean isScalingDisabled(String serviceName) {
+        Map<String, String> annotations = getDeployment(serviceName).getMetadata().getAnnotations();
+        return annotations != null && annotations.getOrDefault("msinit.io/scaling", "").equals("disabled");
     }
 
     /**
