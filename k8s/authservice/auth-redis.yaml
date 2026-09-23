@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: auth-rate-limit-redis
+  name: auth-redis
 spec:
   clusterIP: None
   selector:
-    app: auth-rate-limit-redis
+    app: auth-redis
   ports:
     - port: 6379
       targetPort: 6379
@@ -13,39 +13,39 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: auth-rate-limit-redis
+  name: auth-redis
 spec:
-  serviceName: auth-rate-limit-redis
+  serviceName: auth-redis
   replicas: 1
   selector:
     matchLabels:
-      app: auth-rate-limit-redis
+      app: auth-redis
   template:
     metadata:
       labels:
-        app: auth-rate-limit-redis
+        app: auth-redis
     spec:
       containers:
-        - name: auth-rate-limit-redis
+        - name: auth-redis
           image: redis:7.4-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
           command:
             - sh
             - -c
-            - redis-server --appendonly yes --requirepass "$AUTH_RATE_LIMIT_REDIS_PASSWORD"
+            - redis-server --appendonly yes --requirepass "$AUTH_REDIS_PASSWORD"
           ports:
             - containerPort: 6379
           env:
-            - name: AUTH_RATE_LIMIT_REDIS_PASSWORD
+            - name: AUTH_REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: authservice-env
-                  key: AUTH_RATE_LIMIT_REDIS_PASSWORD
+                  key: AUTH_REDIS_PASSWORD
           volumeMounts:
-            - name: auth-rate-limit-redis-data
+            - name: auth-redis-data
               mountPath: /data
   volumeClaimTemplates:
     - metadata:
-        name: auth-rate-limit-redis-data
+        name: auth-redis-data
       spec:
         accessModes:
           - ReadWriteOnce
