@@ -22,7 +22,7 @@ data:
     if ! grep -q "$VPN_ROUTER_HOSTNAME" "$corefile"; then
         sed -i "/^[[:space:]]*health$/a\\
         hosts {\\
-            ${VPN_ADDRESS_PREFIX}.1 ${VPN_ROUTER_HOSTNAME}\\
+            ${VPN_NETWORK_PREFIX}.1 ${VPN_ROUTER_HOSTNAME}\\
             fallthrough\\
         }" "$corefile"
     fi
@@ -76,6 +76,8 @@ kind: Deployment
 metadata:
   name: wireguard
 spec:
+  strategy:
+    type: Recreate
   replicas: 1
   selector:
     matchLabels:
@@ -116,11 +118,13 @@ spec:
                   key: VPN_PORT
             - name: PEERS
               value: "0"
-            - name: INTERNAL_SUBNET
+            - name: VPN_NETWORK_PREFIX
               valueFrom:
                 secretKeyRef:
                   name: vpnservice-env
-                  key: VPN_INTERNAL_SUBNET
+                  key: VPN_NETWORK_PREFIX
+            - name: INTERNAL_SUBNET
+              value: $(VPN_NETWORK_PREFIX).0
           securityContext:
             runAsUser: 0
             allowPrivilegeEscalation: false
@@ -158,7 +162,7 @@ spec:
             - name: wireguard-config
               mountPath: /config
         - name: vpn-router
-          image: ghcr.io/strangequark/vpnservice-vpn-router:1.0.1
+          image: ghcr.io/strangequark/vpnservice-vpn-router:1.0.2
           imagePullPolicy: IfNotPresent
           ports:
             - name: router
