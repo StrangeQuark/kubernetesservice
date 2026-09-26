@@ -30,6 +30,7 @@ spec:
       containers:
         - name: react-service
           image: __SERVICE_IMAGE__
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
           envFrom:

@@ -30,6 +30,7 @@ spec:
       containers:
         - name: telemetry-service
           image: __SERVICE_IMAGE__
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 6050
           envFrom:

@@ -39,6 +39,7 @@ spec:
       containers:
         - name: logger-service
           image: __SERVICE_IMAGE__
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 6030
           envFrom:

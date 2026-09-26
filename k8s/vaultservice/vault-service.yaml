@@ -30,6 +30,7 @@ spec:
       containers:
         - name: vault-service
           image: __SERVICE_IMAGE__
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 6020
           envFrom:
