@@ -35,6 +35,7 @@ spec:
       containers:
         - name: jenkins-service
           image: __SERVICE_IMAGE__
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
             - containerPort: 50000

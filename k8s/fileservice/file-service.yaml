@@ -32,6 +32,7 @@ spec:
       containers:
         - name: file-service
           image: __SERVICE_IMAGE__
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 6010
           envFrom:
@@ -48,8 +49,6 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            - name: file-storage
-              mountPath: /fileservice/uploads
           readinessProbe:
             httpGet:
               path: /api/file/health
@@ -64,19 +63,4 @@ spec:
             periodSeconds: 10
       volumes:
         - name: tmp
-          emptyDir:
-            medium: Memory
-        - name: file-storage
-          persistentVolumeClaim:
-            claimName: file-storage
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: file-storage
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+          emptyDir: {}

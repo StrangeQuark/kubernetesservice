@@ -30,6 +30,7 @@ spec:
       containers:
         - name: email-service
           image: __SERVICE_IMAGE__
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 6005
           envFrom:

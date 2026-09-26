@@ -43,6 +43,7 @@ spec:
       containers:
         - name: auth-service
           image: __SERVICE_IMAGE__
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 6001
           resources:
