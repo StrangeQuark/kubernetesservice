@@ -7,6 +7,7 @@ import com.strangequark.kubernetesservice.kubernetes.KubernetesScaleRequest;
 import com.strangequark.kubernetesservice.kubernetes.KubernetesService;
 import com.strangequark.kubernetesservice.kubernetes.KubernetesServiceRequest;
 import org.junit.jupiter.api.Test;
+import io.micrometer.tracing.Tracer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -28,6 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class KubernetesControllerTest {
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private Tracer tracer;
 
     @MockitoBean
     private KubernetesService kubernetesService;
